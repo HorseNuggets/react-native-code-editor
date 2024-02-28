@@ -227,11 +227,11 @@ const CodeEditor = (props: PropsWithForwardRef): JSX.Element => {
                 }, 10);
                 break;
             default:
-                if (Braces.isOpenBrace(key)) {
-                    setTimeout(() => {
-                        setValue((curr) => addClosingBrace(curr, key));
-                    }, 10);
-                }
+                // if (Braces.isOpenBrace(key)) {
+                //     setTimeout(() => {
+                //         setValue((curr) => addClosingBrace(curr, key));
+                //     }, 10);
+                // }
                 break;
         }
         if (onKeyPress) {
