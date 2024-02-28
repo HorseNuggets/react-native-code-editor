@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Platform,
     ColorValue,
+    Pressable,
     NativeSyntheticEvent,
     TextInputScrollEventData,
     TextInputKeyPressEventData,
@@ -150,10 +151,13 @@ const CodeEditor = (props: PropsWithForwardRef): JSX.Element => {
         padding = 16,
     } = addedStyle;
 
+    const [isEditable, setIsEditable] = useState(false);
     const [value, setValue] = useState<string>(initialValue);
     const highlighterRef = useRef<ScrollView>(null);
     const inputRef = useRef<TextInput>(null);
     const inputSelection = useRef<TextInputSelectionType>({ start: 0, end: 0 });
+    const lastPressInRef = useRef<number>(0);
+    const lastScrollRef = useRef<number>(0);
 
     // Only when line numbers are showing
     const lineNumbersPadding = showLineNumbers ? 1.75 * fontSize : undefined;
@@ -215,7 +219,9 @@ const CodeEditor = (props: PropsWithForwardRef): JSX.Element => {
     const handleScroll = (e: NativeSyntheticEvent<TextInputScrollEventData>) => {
         // Match text input scroll with syntax highlighter scroll
         const y = e.nativeEvent.contentOffset.y;
+
         highlighterRef.current?.scrollTo({ y, animated: false });
+        lastScrollRef.current = Date.now();
     };
 
     const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
@@ -243,8 +249,31 @@ const CodeEditor = (props: PropsWithForwardRef): JSX.Element => {
         inputSelection.current = e.nativeEvent.selection;
     };
 
+    const handlePressIn = () => {
+        lastPressInRef.current = Date.now();
+    }
+
+    const handlePressOut = () => {
+        const now = Date.now();
+        const pressDuration = now - lastPressInRef.current;
+        const scrollDuration = now - lastScrollRef.current;
+    
+        // If the press duration is less than 200ms, consider it a tap and focus the TextInput
+        if (pressDuration < 200 && scrollDuration > 200) {
+            setIsEditable(true); // Temporarily ensure the TextInput is editable
+    
+            // Optionally, delay focusing slightly to ensure the UI has time to update
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50); // Adjust based on testing
+        }
+    }
+
     return (
-        <View style={{ width, height, marginTop, marginBottom }} testID={testID}>
+        <View
+            style={{ width, height, marginTop, marginBottom }}
+            testID={testID}
+        >
             <SyntaxHighlighter
                 language={language}
                 addedStyle={addedStyle}
@@ -279,10 +308,14 @@ const CodeEditor = (props: PropsWithForwardRef): JSX.Element => {
                 autoCorrect={false}
                 autoFocus={autoFocus}
                 keyboardType="ascii-capable"
-                editable={!readOnly}
+                editable={isEditable && !readOnly}
                 testID={`${testID}-text-input`}
                 ref={inputRef}
                 multiline
+                onPressIn={ handlePressIn }
+                onPressOut={ handlePressOut }
+                focusable={false}
+                onBlur={ () => setIsEditable(false) }
             />
         </View>
     );
